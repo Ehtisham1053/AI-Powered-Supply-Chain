@@ -1,1 +1,117 @@
-// dashboard.html placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard | Supply Chain Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .dashboard-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .card-icon {
+      font-size: 2.5rem;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+  <div class="container py-4">
+    <div class="text-center mb-4">
+      <h2 class="text-primary fw-bold">Supply Chain Manager Dashboard</h2>
+      <p id="welcomeMsg" class="text-muted"></p>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-warning mb-2">📊</div>
+            <h5 class="card-title">Demand Forecast</h5>
+            <p class="card-text">Run AI-based 7-day sales predictions.</p>
+            <a href="demand_forecast.html" class="btn btn-outline-warning btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-success mb-2">📦</div>
+            <h5 class="card-title">Inventory</h5>
+            <p class="card-text">View & optimize inventory stock levels.</p>
+            <a href="inventory.html" class="btn btn-outline-success btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-info mb-2">📈</div>
+            <h5 class="card-title">Sales Charts</h5>
+            <p class="card-text">View sales trends and performance.</p>
+            <a href="sales.html" class="btn btn-outline-info btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-danger mb-2">📋</div>
+            <h5 class="card-title">System Logs</h5>
+            <p class="card-text">Review activity logs and status reports.</p>
+            <a href="logs.html" class="btn btn-outline-danger btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-primary mb-2">✉️</div>
+            <h5 class="card-title">Messages</h5>
+            <p class="card-text">Send and receive system messages.</p>
+            <a href="messages.html" class="btn btn-outline-primary btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-secondary mb-2">🏬</div>
+            <h5 class="card-title">Warehouse View</h5>
+            <p class="card-text">Check warehouse stock and alerts.</p>
+            <a href="warehouse_view.html" class="btn btn-outline-secondary btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../common/utils.js"></script>
+  <script>
+
+    const tokenData = parseJwt(localStorage.getItem('token'));
+    if (!tokenData || tokenData.role !== 'supply_chain_manager') {
+      alert('Unauthorized or session expired!');
+      window.location.href = '../login.html';
+    } else {
+      document.getElementById('welcomeMsg').innerText = `Welcome, ${tokenData.username.toUpperCase()} (${tokenData.role.replace(/_/g, ' ')})`;
+    }
+  </script>
+</body>
+</html>
