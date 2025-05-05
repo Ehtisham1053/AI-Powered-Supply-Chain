@@ -1,1 +1,249 @@
-// demand_forecast.html placeholder
+<!-- supply_chain_manager/demand_forecast.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Demand Forecasting | SCM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .plot-container {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 20px;
+      background-color: #fff;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+  <h2 class="text-center text-primary mb-4">📊 Demand Forecast Dashboard</h2>
+
+  <div class="d-flex justify-content-between mb-3">
+    <button class="btn btn-success" onclick="runForecast()">📈 Forecast Now</button>
+
+    <div class="d-flex gap-2 align-items-center">
+      <select id="forecastDateSelect" class="form-select" onchange="loadForecast()">
+        <option value="">Select Forecast Date</option>
+      </select>
+      <button class="btn btn-danger" onclick="deleteForecast()">🗑 Delete</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-responsive bg-white p-3 rounded shadow-sm">
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>Store</th>
+          <th>Item</th>
+          <th>Total 7-Day Prediction</th>
+        </tr>
+      </thead>
+      <tbody id="forecastTableBody">
+        <tr><td colspan="3" class="text-center">No forecast selected.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Charts -->
+  <div class="row mt-4">
+    <div class="col-md-6 plot-container">
+      <div id="storeChart"></div>
+    </div>
+    <div class="col-md-6 plot-container">
+      <div id="itemChart"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../common/utils.js"></script>
+<script>
+const token = localStorage.getItem('token');
+const tokenData = parseJwt(token);
+if (!tokenData || tokenData.role !== 'supply_chain_manager') {
+  alert("Unauthorized access");
+  window.location.href = "../login.html";
+}
+
+const apiBase = "http://localhost:5000/api/demand";
+const forecastTable = document.getElementById('forecastTableBody');
+const forecastDateSelect = document.getElementById('forecastDateSelect');
+
+async function fetchForecastDates() {
+  const res = await fetch(`${apiBase}/forecasts`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  forecastDateSelect.innerHTML = `<option value="">Select Forecast Date</option>`;
+  data.forecasts.forEach(d => {
+    forecastDateSelect.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+}
+
+async function loadForecast() {
+  const selectedDate = forecastDateSelect.value;
+  if (!selectedDate) return;
+
+  const res = await fetch(`${apiBase}/latest-forecast`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
+
+  // Fill table
+  forecastTable.innerHTML = '';
+  if (data.forecast.length === 0) {
+    forecastTable.innerHTML = `<tr><td colspan="3" class="text-center">No forecast data available.</td></tr>`;
+    return;
+  }
+
+  data.forecast.forEach(row => {
+    const storeName = storeMap[row.Store] || `Store ${row.Store}`;
+    const itemName = itemMap[row.Item] || `Item ${row.Item}`;
+    forecastTable.innerHTML += `
+      <tr>
+        <td>${storeName}</td>
+        <td>${itemName}</td>
+        <td>${row.total_7_days_prediction.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  plotCharts(data.forecast);
+}
+
+async function runForecast() {
+  if (!confirm("Generate 7-day forecast? Existing data will be overwritten.")) return;
+  const res = await fetch(`${apiBase}/forecast`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  alert(data.message);
+  if (data.success) {
+    fetchForecastDates();
+    loadForecast();
+  }
+}
+
+async function deleteForecast() {
+  const selectedDate = forecastDateSelect.value;
+  if (!selectedDate) return alert("Please select a forecast date");
+
+  if (!confirm(`Delete forecast for ${selectedDate}?`)) return;
+
+  const res = await fetch(`${apiBase}/delete-forecast/${selectedDate}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  alert(data.message);
+  if (data.success) {
+    fetchForecastDates();
+    forecastTable.innerHTML = `<tr><td colspan="3" class="text-center">No forecast selected.</td></tr>`;
+    Plotly.purge('storeChart');
+    Plotly.purge('itemChart');
+  }
+}
+
+function plotCharts(forecastData) {
+  const storeAgg = {};
+  const itemAgg = {};
+
+  forecastData.forEach(row => {
+    const store = storeMap[row.Store] || `Store ${row.Store}`;
+    const item = itemMap[row.Item] || `Item ${row.Item}`;
+    storeAgg[store] = (storeAgg[store] || 0) + row.total_7_days_prediction;
+    itemAgg[item] = (itemAgg[item] || 0) + row.total_7_days_prediction;
+  });
+
+  const topStores = Object.entries(storeAgg)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const topItems = Object.entries(itemAgg)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  Plotly.newPlot('storeChart', [{
+    x: topStores.map(e => e[0]),
+    y: topStores.map(e => e[1]),
+    type: 'bar',
+    marker: { color: 'teal' }
+  }], { title: "Top 5 Stores by Predicted Sales" });
+
+  Plotly.newPlot('itemChart', [{
+    x: topItems.map(e => e[0]),
+    y: topItems.map(e => e[1]),
+    type: 'bar',
+    marker: { color: 'orange' }
+  }], { title: "Top 5 Items by Predicted Sales" });
+}
+
+// Mappings (import from utils.js or define here)
+const storeMap = {
+  1: "PAKMART G-9 MARKAZ", 2: "PAKMART F-10 CENTER", 3: "PAKMART I-8 COMMERCIAL", 4: "PAKMART DHA PHASE 2", 5: "PAKMART BLUE AREA",
+  6: "PAKMART BAHARAKU", 7: "PAKMART GULBERG GREENS", 8: "PAKMART F-6 SUPER MARKET", 9: "PAKMART BANI GALA", 10: "PAKMART H-13 SERVICE ROAD"
+};
+
+const itemMap = {
+    1: "Fresh Fruits",
+    2: "Fresh Vegetables",
+    3: "Dairy Products",
+    4: "Bakery Items",
+    5: "Beverages",
+    6: "Canned Goods",
+    7: "Frozen Foods",
+    8: "Snacks",
+    9: "Breakfast Cereals",
+    10: "Condiments & Sauces",
+    11: "Meat & Poultry",
+    12: "Seafood",
+    13: "Personal Care",
+    14: "Hair Care",
+    15: "Skin Care",
+    16: "Oral Care",
+    17: "Baby Products",
+    18: "Pet Supplies",
+    19: "Household Cleaners",
+    20: "Laundry Detergents",
+    21: "Paper Products",
+    22: "Stationery",
+    23: "Kitchenware",
+    24: "Cookware",
+    25: "Tableware",
+    26: "Home Decor",
+    27: "Lighting & Lamps",
+    28: "Small Appliances",
+    29: "Electronics",
+    30: "Mobile Accessories",
+    31: "Toys & Games",
+    32: "Books & Magazines",
+    33: "Office Supplies",
+    34: "Health Supplements",
+    35: "Over-the-Counter Medicine",
+    36: "First Aid Supplies",
+    37: "Gardening Tools",
+    38: "Automotive Supplies",
+    39: "Luggage & Travel Accessories",
+    40: "Footwear",
+    41: "Apparel (Men)",
+    42: "Apparel (Women)",
+    43: "Apparel (Kids)",
+    44: "Jewelry & Accessories",
+    45: "Seasonal Decorations",
+    46: "Party Supplies",
+    47: "Gift Items",
+    48: "Cleaning Tools (Mops, Brooms)",
+    49: "Fitness Equipment",
+    50: "Craft Supplies"
+};
+
+fetchForecastDates();
+</script>
+</body>
+</html>
