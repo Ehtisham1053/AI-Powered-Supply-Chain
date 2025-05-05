@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
           // Redirect based on role
           switch (role) {
             case 'supply_chain_manager':
-              window.location.href = '/supply_chain_manager/dashboard.html';
+              window.location.href = '/frontend/supply_chain_manager/dashboard.html';
               break;
             case 'warehouse_team':
               window.location.href = '/warehouse/dashboard.html';

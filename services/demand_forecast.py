@@ -7,6 +7,11 @@ from models import db
 from models.sales import Sale, Forecasted7Days
 from models.logs import Log
 from config import Config
+
+from models.sales import Forecasted7Days  # or adjust path if needed
+from models import db
+
+
 from utils.feature_engineering import add_sales_timeseries_metrics, add_date_features ,create_targets, load_and_preprocess
 class DemandForecastService:
     @staticmethod
@@ -237,4 +242,17 @@ class DemandForecastService:
             db.session.commit()
             
             return False, f"Error deleting forecast: {str(e)}"
+        
+
+    @staticmethod
+    def get_all_forecast_dates():
+        """Return a list of all forecast dates that exist in the DB"""
+        try:
+
+
+            dates = db.session.query(Forecasted7Days.forecast_date).distinct().order_by(Forecasted7Days.forecast_date.desc()).all()
+            return [date[0].isoformat() for date in dates]  # convert date objects to strings
+        except Exception as e:
+            return []
+
             
