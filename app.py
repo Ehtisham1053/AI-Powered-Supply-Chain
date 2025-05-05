@@ -10,9 +10,9 @@ from utils.db_utils import initialize_database
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
-    # Initialize extensions
-    CORS(app)
+
     jwt = JWTManager(app)
     init_db(app)
     
