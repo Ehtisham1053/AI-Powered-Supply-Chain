@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
               window.location.href = '/frontend/supply_chain_manager/dashboard.html';
               break;
             case 'warehouse_team':
-              window.location.href = '/warehouse/dashboard.html';
+              window.location.href = '/warehouse/warehouse_dashboard.html';
               break;
             case 'procurement_officer':
               window.location.href = '/procurement/dashboard.html';

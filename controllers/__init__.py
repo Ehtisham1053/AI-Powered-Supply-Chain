@@ -4,9 +4,9 @@
 from .auth_controller import auth_bp
 from .demand_controller import demand_bp
 from .inventory_controller import inventory_bp
-
+from .message_controller import message_bp
 from .warehouse_controller import warehouse_bp
-
+from .user_controller import user_bp
 from .procurement_controller import procurement_bp
 
 from .supplier_controller import supplier_bp
@@ -25,3 +25,5 @@ def init_routes(app):
     app.register_blueprint(supplier_bp)
     app.register_blueprint(sales_bp)
     app.register_blueprint(log_bp)
+    app.register_blueprint(message_bp)
+    app.register_blueprint(user_bp)

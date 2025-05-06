@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Messages | SCM Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .table thead { background-color: #0d6efd; color: white; }
+    .badge-unread { background-color: #ffc107; color: black; }
+    .badge-read { background-color: #28a745; }
+    .modal-header { background-color: #0d6efd; color: white; }
+  </style>
+</head>
+<body>
+<div class="container py-5">
+  <h2 class="text-center text-primary mb-4">📨 Messages</h2>
+
+  <!-- Compose Button -->
+  <div class="mb-3 text-end">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#composeModal">📝 Compose Message</button>
+  </div>
+
+  <!-- Tabs for Inbox and Sent -->
+  <ul class="nav nav-tabs mb-3" id="messageTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="inbox-tab" data-bs-toggle="tab" data-bs-target="#inbox" type="button" role="tab">Inbox</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button" role="tab">Sent</button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="messageTabsContent">
+    <!-- Inbox Tab -->
+    <div class="tab-pane fade show active" id="inbox" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>Subject</th>
+              <th>Status</th>
+              <th>Received</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="inboxTableBody">
+            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sent Tab -->
+    <div class="tab-pane fade" id="sent" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>To</th>
+              <th>Subject</th>
+              <th>Sent</th>
+            </tr>
+          </thead>
+          <tbody id="sentTableBody">
+            <tr><td colspan="3" class="text-center">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compose Message Modal -->
+<div class="modal fade" id="composeModal" tabindex="-1" aria-labelledby="composeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="composeModalLabel">Compose Message</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="composeForm">
+          <div class="mb-3">
+            <label for="receiverId" class="form-label">To (User ID)</label>
+            <input type="number" class="form-control" id="receiverId" required>
+          </div>
+          <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" required>
+          </div>
+          <div class="mb-3">
+            <label for="body" class="form-label">Message</label>
+            <textarea class="form-control" id="body" rows="4" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS and dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const token = localStorage.getItem("token");
+  const apiBase = "http://localhost:5000/api/messages";
+
+  // Fetch Inbox Messages
+  async function fetchInbox() {
+    const res = await fetch(`${apiBase}/inbox`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const table = document.getElementById("inboxTableBody");
+    table.innerHTML = "";
+    if (!data.success || data.messages.length === 0) {
+      table.innerHTML = '<tr><td colspan="5" class="text-center">No messages found.</td></tr>';
+      return;
+    }
+    data.messages.forEach(msg => {
+      const statusBadge = msg.status === 'unread' ? '<span class="badge bg-warning text-dark">Unread</span>' : '<span class="badge bg-success">Read</span>';
+      table.innerHTML += `
+        <tr>
+          <td>${msg.sender_id}</td>
+          <td>${msg.subject}</td>
+          <td>${statusBadge}</td>
+          <td>${new Date(msg.timestamp).toLocaleString()}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="viewMessage(${msg.id}, '${msg.subject}', '${msg.body.replace(/'/g, "\\'")}')">View</button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  // Fetch Sent Messages
+  async function fetchSent() {
+    const res = await fetch(`${apiBase}/sent`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const table = document.getElementById("sentTableBody");
+    table.innerHTML = "";
+    if (!data.success || data.messages.length === 0) {
+      table.innerHTML = '<tr><td colspan="3" class="text-center">No messages found.</td></tr>';
+      return;
+    }
+    data.messages.forEach(msg => {
+      table.innerHTML += `
+        <tr>
+          <td>${msg.receiver_id}</td>
+          <td>${msg.subject}</td>
+          <td>${new Date(msg.timestamp).toLocaleString()}</td>
+        </tr>
+      `;
+    });
+  }
+
+  // View Message and Mark as Read
+  async function viewMessage(id, subject, body) {
+    alert(`Subject: ${subject}\n\n${body}`);
+    // Mark as read
+    await fetch(`${apiBase}/mark-read/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    fetchInbox();
+  }
+
+  // Compose Message
+  document.getElementById("composeForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const receiverId = document.getElementById("receiverId").value;
+    const subject = document.getElementById("subject").value;
+    const body = document.getElementById("body").value;
+    const res = await fetch(`${apiBase}/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ receiver_id: receiverId, subject, body })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert("Message sent successfully!");
+      document.getElementById("composeForm").reset();
+      const composeModal = bootstrap.Modal.getInstance(document.getElementById('composeModal'));
+      composeModal.hide();
+      fetchSent();
+    } else {
+      alert("Failed to send message.");
+    }
+  });
+
+  // Initial Fetch
+  fetchInbox();
+  fetchSent();
+</script>
+</body>
+</html>

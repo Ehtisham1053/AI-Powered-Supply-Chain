@@ -1,1 +1,176 @@
-// sales.html placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sales Charts | Supply Chain Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body { background-color: #f4f7fa; }
+    .card-header { background-color: #0d6efd; color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <h2 class="text-center mb-4 text-primary">📊 Sales Dashboard</h2>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <label>Select Store</label>
+        <select id="storeSelect" class="form-select">
+          <option value="">All Stores</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label>Select Item</label>
+        <select id="itemSelect" class="form-select">
+          <option value="">All Items</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
+        <button class="btn btn-primary w-100" onclick="loadSalesCharts()">Load Charts</button>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-4">
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header">Total Sales Over Time</div>
+          <div class="card-body"><div id="salesTimeChart"></div></div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Top 5 Stores</div>
+          <div class="card-body"><div id="topStoresChart"></div></div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">Top 5 Items</div>
+          <div class="card-body"><div id="topItemsChart"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+const apiBase = "http://localhost:5000/api/sales";
+
+// Store & Item Mapping
+const storeMap = {
+  1: "PAKMART G-9 MARKAZ", 2: "PAKMART F-10 CENTER", 3: "PAKMART I-8 COMMERCIAL", 4: "PAKMART DHA PHASE 2", 5: "PAKMART BLUE AREA",
+  6: "PAKMART BAHARAKU", 7: "PAKMART GULBERG GREENS", 8: "PAKMART F-6 SUPER MARKET", 9: "PAKMART BANI GALA", 10: "PAKMART H-13 SERVICE ROAD"
+};
+
+const itemMap = {
+  1: "Fresh Fruits", 2: "Fresh Vegetables", 3: "Dairy Products", 4: "Bakery Items", 5: "Beverages",
+  6: "Canned Goods", 7: "Frozen Foods", 8: "Snacks", 9: "Breakfast Cereals", 10: "Condiments & Sauces",
+  11: "Meat & Poultry", 12: "Seafood", 13: "Personal Care", 14: "Hair Care", 15: "Skin Care",
+  16: "Oral Care", 17: "Baby Products", 18: "Pet Supplies", 19: "Household Cleaners", 20: "Laundry Detergents"
+};
+
+async function loadSalesCharts() {
+  const store = document.getElementById("storeSelect").value;
+  const item = document.getElementById("itemSelect").value;
+
+  const res = await fetch(`${apiBase}/data`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
+
+  let sales = data.sales;
+  if (store) sales = sales.filter(s => s.Store == store);
+  if (item) sales = sales.filter(s => s.Item == item);
+
+  const byDate = {};
+  const storeAgg = {};
+  const itemAgg = {};
+
+  sales.forEach(s => {
+    const date = s.Date;
+    const storeName = storeMap[s.Store] || `Store ${s.Store}`;
+    const itemName = itemMap[s.Item] || `Item ${s.Item}`;
+
+    // Time series
+    byDate[date] = (byDate[date] || 0) + s.Sale;
+
+    // Store-wise
+    storeAgg[storeName] = (storeAgg[storeName] || 0) + s.Sale;
+
+    // Item-wise
+    itemAgg[itemName] = (itemAgg[itemName] || 0) + s.Sale;
+  });
+
+  const timeDates = Object.keys(byDate).sort();
+  const timeValues = timeDates.map(d => byDate[d]);
+
+  // Plot 1: Time Series
+  Plotly.newPlot('salesTimeChart', [{
+    x: timeDates,
+    y: timeValues,
+    type: 'scatter',
+    mode: 'lines+markers',
+    marker: { color: '#007bff' }
+  }], {
+    title: 'Sales Over Time',
+    xaxis: { title: 'Date' },
+    yaxis: { title: 'Total Sales' }
+  });
+
+  // Plot 2: Top 5 Stores
+  const topStores = Object.entries(storeAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  Plotly.newPlot('topStoresChart', [{
+    x: topStores.map(e => e[0]),
+    y: topStores.map(e => e[1]),
+    type: 'bar',
+    marker: { color: 'green' }
+  }], {
+    title: 'Top 5 Stores by Sales'
+  });
+
+  // Plot 3: Top 5 Items
+  const topItems = Object.entries(itemAgg).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  Plotly.newPlot('topItemsChart', [{
+    x: topItems.map(e => e[0]),
+    y: topItems.map(e => e[1]),
+    type: 'bar',
+    marker: { color: 'orange' }
+  }], {
+    title: 'Top 5 Items by Sales'
+  });
+}
+
+async function populateDropdowns() {
+  const res = await fetch(`${apiBase}/data`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (!data.success) return;
+
+  const stores = [...new Set(data.sales.map(s => s.Store))];
+  const items = [...new Set(data.sales.map(s => s.Item))];
+
+  const storeSelect = document.getElementById("storeSelect");
+  const itemSelect = document.getElementById("itemSelect");
+
+  stores.forEach(id => {
+    storeSelect.innerHTML += `<option value="${id}">${storeMap[id] || 'Store ' + id}</option>`;
+  });
+
+  items.forEach(id => {
+    itemSelect.innerHTML += `<option value="${id}">${itemMap[id] || 'Item ' + id}</option>`;
+  });
+}
+
+populateDropdowns();
+</script>
+</body>
+</html>

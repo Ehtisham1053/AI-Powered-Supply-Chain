@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Warehouse 30-Day Forecast</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="mb-4">📈 30-Day Warehouse Forecast</h2>
+
+    <button class="btn btn-primary mb-3" onclick="generateForecast()">Generate Forecast</button>
+    <div id="forecastResult" class="mb-3 text-success"></div>
+
+    <canvas id="forecastChart" height="100"></canvas>
+
+    <h4 class="mt-5">📋 Forecasted Data</h4>
+    <table class="table table-bordered table-striped" id="forecastTable">
+      <thead class="table-dark">
+        <tr>
+          <th>Item ID</th>
+          <th>Predicted 30-Day Sales</th>
+          <th>Forecast Date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="mt-4">
+      <input type="date" id="deleteDate" class="form-control w-25 d-inline">
+      <button class="btn btn-danger" onclick="deleteForecast()">Delete Forecast by Date</button>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = "http://localhost:5000/api/warehouse";
+    const token = localStorage.getItem("token");
+
+    async function generateForecast() {
+      const res = await fetch(`${apiBase}/optimize`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      document.getElementById("forecastResult").innerText = data.message;
+      loadForecast();
+    }
+
+    async function loadForecast() {
+      const res = await fetch(`${apiBase}/forecast`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message);
+        return;
+      }
+
+      const tableBody = document.querySelector("#forecastTable tbody");
+      tableBody.innerHTML = "";
+
+      const items = data.forecast.map(item => item.Item);
+      const predictions = data.forecast.map(item => item.total_predicted_sales.toFixed(2));
+
+      data.forecast.forEach(item => {
+        const row = `
+          <tr>
+            <td>${item.Item}</td>
+            <td>${item.total_predicted_sales.toFixed(2)}</td>
+            <td>${new Date().toISOString().split('T')[0]}</td>
+          </tr>`;
+        tableBody.innerHTML += row;
+      });
+
+      renderChart(items, predictions);
+    }
+
+    function renderChart(labels, data) {
+      const ctx = document.getElementById('forecastChart').getContext('2d');
+      if (window.forecastChart) {
+        window.forecastChart.destroy();
+      }
+
+      window.forecastChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Forecasted Sales',
+            data,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    async function deleteForecast() {
+      const date = document.getElementById("deleteDate").value;
+      if (!date) return alert("Please select a date");
+
+      const res = await fetch(`${apiBase}/forecast?date=${date}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      const data = await res.json();
+      alert(data.message);
+      if (data.success) loadForecast();
+    }
+
+    // Load forecast initially
+    loadForecast();
+  </script>
+</body>
+</html>

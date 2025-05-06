@@ -317,6 +317,15 @@ function updateInventory() {
 
 
 function optimizeInventory() {
+    
+forecast_df['Store'] = forecast_df['Store'].astype(int)
+forecast_df['Item'] = forecast_df['Item'].astype(int)
+forecast_df['total_7_days_prediction'] = forecast_df['total_7_days_prediction'].round(2)
+
+inventory_df['Store'] = inventory_df['Store'].astype(int)
+inventory_df['Item'] = inventory_df['Item'].astype(int)
+inventory_df['Stock_available'] = inventory_df['Stock_available'].astype(float)
+
   fetch(`${apiBase}/optimize`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` }

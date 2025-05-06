@@ -9,7 +9,7 @@ from models.inventory import InventoryRequest, Inventory
 from models.sales import Sale
 from models.logs import Log
 from config import Config
-
+from utils.feature_engineering import load_and_preprocess ,add_date_features, add_sales_timeseries_metrics , create_targets
 class WarehouseService:
     @staticmethod
     def get_warehouse_data():
@@ -250,6 +250,7 @@ class WarehouseService:
             
             # Get unique items
             items = processed_df['item'].unique()
+
             
             # Initialize results dataframe
             forecast_results = pd.DataFrame(columns=['Item', 'total_predicted_sales'])
@@ -258,6 +259,7 @@ class WarehouseService:
             for item in items:
                 # Filter data for this item
                 item_data = processed_df[processed_df['Item'] == item]
+
                 
                 if len(item_data) < 30:  # Need at least 30 days of data
                     continue
@@ -269,7 +271,12 @@ class WarehouseService:
                 ]].values
                 
                 # Load model for this item
-                model_path = os.path.join(model_dir, f"{store_id}_{item_id}_30_day_sales.pkl")
+                store_items = processed_df[['store', 'item']].drop_duplicates()
+
+                for _, row in store_items.iterrows():
+                    store = row['store']
+                    item = row['item']
+                model_path = os.path.join(model_dir, f"{store}_{item}_30_day_sales.pkl")
                 
                 # If model doesn't exist, skip this item
                 if not os.path.exists(model_path):

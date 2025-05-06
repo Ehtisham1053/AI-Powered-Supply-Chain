@@ -6,7 +6,7 @@ from controllers import init_routes
 from config import Config
 from datetime import datetime
 from utils.db_utils import initialize_database
-
+from flask import send_from_directory
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -42,6 +42,11 @@ def create_app():
             'success': True,
             'message': result
         }), 200
+    
+
+    @app.route('/warehouse/<path:filename>')
+    def serve_warehouse_files(filename):
+        return send_from_directory('frontend/warehouse', filename)
     
     # Health check route
     @app.route('/api/health', methods=['GET'])

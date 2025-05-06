@@ -1,1 +1,166 @@
-// logs.html placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>System Logs | SCM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f5f7fa; }
+    .table thead { background-color: #0d6efd; color: white; }
+    .badge-success { background-color: #28a745; }
+    .badge-danger { background-color: #dc3545; }
+    .badge-warning { background-color: #ffc107; color: black; }
+    .card-header { background-color: #0d6efd; color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="container py-5">
+  <h2 class="text-center text-primary mb-4">🗂 System Logs Dashboard</h2>
+
+  <!-- Filter Section -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <input type="text" id="moduleInput" class="form-control" placeholder="Filter by module (e.g. sales)">
+    </div>
+    <div class="col-md-4">
+      <input type="number" id="userInput" class="form-control" placeholder="Filter by User ID">
+    </div>
+    <div class="col-md-4">
+      <button class="btn btn-primary w-100" onclick="loadLogs()">🔍 Filter Logs</button>
+    </div>
+  </div>
+
+  <!-- Download Button -->
+  <div class="mb-3 text-end">
+    <button class="btn btn-outline-success" onclick="downloadLogs()">⬇️ Download Logs CSV</button>
+  </div>
+
+  <!-- Table -->
+  <div class="card shadow-sm">
+    <div class="card-header">📄 Log Entries (Last 100)</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered m-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>User</th>
+              <th>Module</th>
+              <th>Action</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody">
+            <tr><td colspan="7" class="text-center py-3">Loading logs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+const apiBase = "http://localhost:5000/api/logs";
+
+async function loadLogs() {
+  const module = document.getElementById("moduleInput").value.trim();
+  const userId = document.getElementById("userInput").value.trim();
+  const query = new URLSearchParams();
+
+  if (module) query.append("module", module);
+  if (userId) query.append("user_id", userId);
+
+  const res = await fetch(`${apiBase}/?${query.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+
+  const table = document.getElementById("logsTableBody");
+  table.innerHTML = "";
+
+  if (!data.success || data.logs.length === 0) {
+    table.innerHTML = `<tr><td colspan="7" class="text-center py-3">No logs found</td></tr>`;
+    return;
+  }
+
+  data.logs.forEach((log, index) => {
+    table.innerHTML += `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${log.user || '-'}</td>
+        <td>${log.module}</td>
+        <td>${log.action}</td>
+        <td>${log.description}</td>
+        <td><span class="badge ${statusClass(log.status)}">${log.status}</span></td>
+        <td>${new Date(log.timestamp).toLocaleString()}</td>
+      </tr>
+    `;
+  });
+}
+
+function statusClass(status) {
+  switch (status.toLowerCase()) {
+    case 'success': return 'badge-success';
+    case 'error': return 'badge-danger';
+    case 'warning': return 'badge-warning';
+    default: return 'badge-secondary';
+  }
+}
+
+function downloadLogs() {
+  const module = document.getElementById("moduleInput").value.trim();
+  const userId = document.getElementById("userInput").value.trim();
+  const query = new URLSearchParams();
+
+  if (module) query.append("module", module);
+  if (userId) query.append("user_id", userId);
+
+  window.location.href = `${apiBase}/download?${query.toString()}`;
+}
+
+loadLogs();
+async function downloadLogs() {
+  const module = document.getElementById("moduleInput").value.trim();
+  const userId = document.getElementById("userInput").value.trim();
+  const query = new URLSearchParams();
+
+  if (module) query.append("module", module);
+  if (userId) query.append("user_id", userId);
+
+  const url = `http://localhost:5000/api/logs/download?${query.toString()}`;
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      alert(error.message || "Failed to download logs.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = "logs.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong while downloading.");
+  }
+}
+</script>
+</body>
+</html>
