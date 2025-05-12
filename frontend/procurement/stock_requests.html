@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Warehouse Stock Requests | Procurement</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f5f7fa; }
+    .badge-success { background-color: #28a745; }
+    .badge-danger { background-color: #dc3545; }
+  </style>
+</head>
+<body>
+<div class="container py-5">
+  <h2 class="text-center text-primary mb-4">📦 Warehouse Stock Requests</h2>
+  <table class="table table-bordered table-hover">
+    <thead class="table-dark">
+      <tr>
+        <th>#</th>
+        <th>Item</th>
+        <th>Requested Quantity</th>
+        <th>Status</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody id="requestsTable">
+      <tr><td colspan="5" class="text-center">Loading requests...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+const apiUrl = "http://localhost:5000/api/procurement/warehouse-requests";
+const itemMap = {
+    1: "Fresh Fruits",
+    2: "Fresh Vegetables",
+    3: "Dairy Products",
+    4: "Bakery Items",
+    5: "Beverages",
+    6: "Canned Goods",
+    7: "Frozen Foods",
+    8: "Snacks",
+    9: "Breakfast Cereals",
+    10: "Condiments & Sauces",
+    11: "Meat & Poultry",
+    12: "Seafood",
+    13: "Personal Care",
+    14: "Hair Care",
+    15: "Skin Care",
+    16: "Oral Care",
+    17: "Baby Products",
+    18: "Pet Supplies",
+    19: "Household Cleaners",
+    20: "Laundry Detergents",
+    21: "Paper Products",
+    22: "Stationery",
+    23: "Kitchenware",
+    24: "Cookware",
+    25: "Tableware",
+    26: "Home Decor",
+    27: "Lighting & Lamps",
+    28: "Small Appliances",
+    29: "Electronics",
+    30: "Mobile Accessories",
+    31: "Toys & Games",
+    32: "Books & Magazines",
+    33: "Office Supplies",
+    34: "Health Supplements",
+    35: "Over-the-Counter Medicine",
+    36: "First Aid Supplies",
+    37: "Gardening Tools",
+    38: "Automotive Supplies",
+    39: "Luggage & Travel Accessories",
+    40: "Footwear",
+    41: "Apparel (Men)",
+    42: "Apparel (Women)",
+    43: "Apparel (Kids)",
+    44: "Jewelry & Accessories",
+    45: "Seasonal Decorations",
+    46: "Party Supplies",
+    47: "Gift Items",
+    48: "Cleaning Tools (Mops, Brooms)",
+    49: "Fitness Equipment",
+    50: "Craft Supplies"
+};
+
+async function loadRequests() {
+  try {
+    const res = await fetch(apiUrl, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    const table = document.getElementById("requestsTable");
+    table.innerHTML = "";
+
+    if (!data.success || data.requests.length === 0) {
+      table.innerHTML = `<tr><td colspan="5" class="text-center">No pending requests</td></tr>`;
+      return;
+    }
+
+    data.requests.forEach((req, index) => {
+      const itemName = itemMap[req.item] || `Item ${req.item}`;
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${itemName}</td>
+        <td>${req.requested_quantity}</td>
+        <td><span class="badge ${req.status === 'fulfilled' ? 'badge-success' : req.status === 'canceled' ? 'badge-danger' : 'bg-secondary'}">${req.status}</span></td>
+        <td>${new Date(req.created_at).toLocaleString()}</td>
+      `;
+      table.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error loading requests:", error);
+    document.getElementById("requestsTable").innerHTML = `<tr><td colspan="5" class="text-danger text-center">Failed to load data</td></tr>`;
+  }
+}
+
+loadRequests();
+</script>
+</body>
+</html>

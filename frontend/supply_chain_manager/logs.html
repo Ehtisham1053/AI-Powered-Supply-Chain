@@ -1,166 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>System Logs | SCM</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Procurement Logs</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body { background: #f5f7fa; }
-    .table thead { background-color: #0d6efd; color: white; }
-    .badge-success { background-color: #28a745; }
-    .badge-danger { background-color: #dc3545; }
-    .badge-warning { background-color: #ffc107; color: black; }
-    .card-header { background-color: #0d6efd; color: white; font-weight: bold; }
-  </style>
 </head>
-<body>
-<div class="container py-5">
-  <h2 class="text-center text-primary mb-4">🗂 System Logs Dashboard</h2>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center text-primary mb-4">🧾 Procurement Officer Logs</h2>
 
-  <!-- Filter Section -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <input type="text" id="moduleInput" class="form-control" placeholder="Filter by module (e.g. sales)">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-success" onclick="downloadCSV()">⬇️ Download CSV</button>
     </div>
-    <div class="col-md-4">
-      <input type="number" id="userInput" class="form-control" placeholder="Filter by User ID">
-    </div>
-    <div class="col-md-4">
-      <button class="btn btn-primary w-100" onclick="loadLogs()">🔍 Filter Logs</button>
-    </div>
-  </div>
 
-  <!-- Download Button -->
-  <div class="mb-3 text-end">
-    <button class="btn btn-outline-success" onclick="downloadLogs()">⬇️ Download Logs CSV</button>
-  </div>
+    <div id="alertContainer"></div>
 
-  <!-- Table -->
-  <div class="card shadow-sm">
-    <div class="card-header">📄 Log Entries (Last 100)</div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-bordered m-0">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>User</th>
-              <th>Module</th>
-              <th>Action</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Timestamp</th>
-            </tr>
-          </thead>
-          <tbody id="logsTableBody">
-            <tr><td colspan="7" class="text-center py-3">Loading logs...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <table class="table table-bordered table-hover bg-white shadow-sm">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody id="logTable">
+        <tr><td colspan="5" class="text-center">Loading logs...</td></tr>
+      </tbody>
+    </table>
   </div>
-</div>
 
 <script>
 const token = localStorage.getItem("token");
-const apiBase = "http://localhost:5000/api/logs";
 
-async function loadLogs() {
-  const module = document.getElementById("moduleInput").value.trim();
-  const userId = document.getElementById("userInput").value.trim();
-  const query = new URLSearchParams();
-
-  if (module) query.append("module", module);
-  if (userId) query.append("user_id", userId);
-
-  const res = await fetch(`${apiBase}/?${query.toString()}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  const data = await res.json();
-
-  const table = document.getElementById("logsTableBody");
+async function fetchProcurementLogs() {
+  const table = document.getElementById("logTable");
   table.innerHTML = "";
 
-  if (!data.success || data.logs.length === 0) {
-    table.innerHTML = `<tr><td colspan="7" class="text-center py-3">No logs found</td></tr>`;
-    return;
-  }
+  try {
+    const res = await fetch("http://localhost:5000/api/logs/procurement-officer", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
-  data.logs.forEach((log, index) => {
-    table.innerHTML += `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${log.user || '-'}</td>
-        <td>${log.module}</td>
+    const data = await res.json();
+
+    if (!data.success || !data.logs || data.logs.length === 0) {
+      table.innerHTML = `<tr><td colspan="5" class="text-center">No procurement logs found.</td></tr>`;
+      return;
+    }
+
+    data.logs.forEach(log => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${log.id}</td>
         <td>${log.action}</td>
         <td>${log.description}</td>
-        <td><span class="badge ${statusClass(log.status)}">${log.status}</span></td>
+        <td><span class="badge ${log.status === 'success' ? 'bg-success' : log.status === 'error' ? 'bg-danger' : 'bg-warning'}">${log.status}</span></td>
         <td>${new Date(log.timestamp).toLocaleString()}</td>
-      </tr>
-    `;
-  });
-}
+      `;
+      table.appendChild(row);
+    });
 
-function statusClass(status) {
-  switch (status.toLowerCase()) {
-    case 'success': return 'badge-success';
-    case 'error': return 'badge-danger';
-    case 'warning': return 'badge-warning';
-    default: return 'badge-secondary';
+  } catch (err) {
+    console.error("Error loading logs:", err);
+    showAlert(false, "Failed to fetch logs from server.");
   }
 }
 
-function downloadLogs() {
-  const module = document.getElementById("moduleInput").value.trim();
-  const userId = document.getElementById("userInput").value.trim();
-  const query = new URLSearchParams();
-
-  if (module) query.append("module", module);
-  if (userId) query.append("user_id", userId);
-
-  window.location.href = `${apiBase}/download?${query.toString()}`;
-}
-
-loadLogs();
-async function downloadLogs() {
-  const module = document.getElementById("moduleInput").value.trim();
-  const userId = document.getElementById("userInput").value.trim();
-  const query = new URLSearchParams();
-
-  if (module) query.append("module", module);
-  if (userId) query.append("user_id", userId);
-
-  const url = `http://localhost:5000/api/logs/download?${query.toString()}`;
-  const token = localStorage.getItem("token");
-
+async function downloadCSV() {
   try {
-    const res = await fetch(url, {
+    const res = await fetch("http://localhost:5000/api/logs/download?module=procurement", {
       headers: {
         Authorization: `Bearer ${token}`
       }
     });
 
     if (!res.ok) {
-      const error = await res.json();
-      alert(error.message || "Failed to download logs.");
+      const data = await res.json();
+      showAlert(false, data.message || "Failed to download logs.");
       return;
     }
 
     const blob = await res.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = "logs.csv";
+    a.href = url;
+    a.download = "procurement_logs.csv";
     document.body.appendChild(a);
     a.click();
-    a.remove();
-    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   } catch (err) {
-    console.error(err);
-    alert("Something went wrong while downloading.");
+    console.error("Error downloading logs:", err);
+    showAlert(false, "Download failed.");
   }
 }
+
+function showAlert(success, message) {
+  const alertDiv = document.getElementById("alertContainer");
+  const type = success ? "success" : "danger";
+  alertDiv.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  `;
+}
+
+fetchProcurementLogs();
 </script>
 </body>
 </html>

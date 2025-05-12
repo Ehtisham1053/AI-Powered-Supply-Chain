@@ -10,24 +10,23 @@ log_bp = Blueprint('log', __name__, url_prefix='/api/logs')
 
 @log_bp.route('/', methods=['GET'])
 @jwt_required()
-@role_required('supply_chain_manager')
+@role_required('warehouse_team')
 def get_logs():
-    # Get query parameters
-    module = request.args.get('module')
-    user_id = request.args.get('user_id')
-    limit = request.args.get('limit', 100, type=int)
-    
-    # Get logs
-    logs, error = LogService.get_logs(module, user_id, limit)
-    
+    module = request.args.get('module', 'warehouse')
+    user_id = get_jwt_identity()
+
+    logs, error = LogService.get_logs(module=module, user_id=user_id)
+    print("✅ LOGS FETCHED:", logs)  # DEBUG LINE
+
     if error:
         return jsonify({'success': False, 'message': error}), 400
-    
+
     return jsonify({
         'success': True,
         'message': 'Logs retrieved successfully',
         'logs': logs
     }), 200
+
 
 @log_bp.route('/module/<module>', methods=['GET'])
 @jwt_required()
@@ -116,5 +115,82 @@ def download_logs():
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename=logs.csv'
+        }
+    )
+
+
+
+
+@log_bp.route('/all', methods=['GET'])
+@jwt_required()
+@role_required('supply_chain_manager')
+def get_all_system_logs():
+    """Fetch all system logs for Supply Chain Manager"""
+    module = request.args.get('module')
+    user_id = request.args.get('user_id')
+    limit = request.args.get('limit', 100, type=int)
+
+    logs, error = LogService.get_logs(module=module, user_id=user_id, limit=limit)
+
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'System logs retrieved successfully',
+        'logs': logs
+    }), 200
+
+
+
+@log_bp.route('/procurement-officer', methods=['GET'])
+@jwt_required()
+@role_required('procurement_officer')
+def get_procurement_officer_logs():
+    user_id = get_jwt_identity()
+
+    logs, error = LogService.get_logs(module="procurement", user_id=user_id)
+
+    if error:
+        return jsonify({"success": False, "message": error}), 400
+
+    return jsonify({
+        "success": True,
+        "message": "Procurement logs retrieved successfully",
+        "logs": logs
+    }), 200
+
+@log_bp.route('/download/procurement-officer', methods=['GET'])
+@jwt_required()
+@role_required('procurement_officer')
+def download_procurement_logs():
+    user_id = get_jwt_identity()
+
+    logs, error = LogService.get_logs(module="procurement", user_id=user_id, limit=None)
+
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(['ID', 'User', 'Module', 'Action', 'Description', 'Status', 'Timestamp'])
+
+    for log in logs:
+        writer.writerow([
+            log['id'],
+            log['user'],
+            log['module'],
+            log['action'],
+            log['description'],
+            log['status'],
+            log['timestamp']
+        ])
+
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename=procurement_logs.csv'
         }
     )

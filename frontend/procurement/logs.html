@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Procurement Logs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center text-primary mb-4">🧾 Procurement Officer Logs</h2>
+
+    <div id="alertContainer"></div>
+
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-success" onclick="downloadCSV()">⬇️ Download CSV</button>
+    </div>
+
+    <table class="table table-bordered table-hover bg-white shadow-sm">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody id="logTable">
+        <tr><td colspan="5" class="text-center">Loading logs...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+
+async function fetchProcurementLogs() {
+  const table = document.getElementById("logTable");
+  table.innerHTML = "";
+
+  try {
+    const res = await fetch("http://localhost:5000/api/logs/procurement-officer", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+
+    if (!data.success || !data.logs || data.logs.length === 0) {
+      table.innerHTML = `<tr><td colspan="5" class="text-center">No procurement logs found.</td></tr>`;
+      return;
+    }
+
+    data.logs.forEach(log => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${log.id}</td>
+        <td>${log.action}</td>
+        <td>${log.description}</td>
+        <td><span class="badge ${log.status === 'success' ? 'bg-success' : log.status === 'error' ? 'bg-danger' : 'bg-warning'}">${log.status}</span></td>
+        <td>${new Date(log.timestamp).toLocaleString()}</td>
+      `;
+      table.appendChild(row);
+    });
+
+  } catch (err) {
+    console.error("Error loading logs:", err);
+    showAlert(false, "Failed to fetch logs from server.");
+  }
+}
+
+async function downloadCSV() {
+  try {
+    const res = await fetch("http://localhost:5000/api/logs/download/procurement-officer", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      showAlert(false, data.message || "Failed to download logs.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "procurement_logs.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Error downloading logs:", err);
+    showAlert(false, "Download failed.");
+  }
+}
+
+function showAlert(success, message) {
+  const alertDiv = document.getElementById("alertContainer");
+  const type = success ? "success" : "danger";
+  alertDiv.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  `;
+}
+
+fetchProcurementLogs();
+</script>
+</body>
+</html>

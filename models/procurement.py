@@ -7,14 +7,13 @@ class PurchaseOrder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     po_number = db.Column(db.String(20), unique=True, nullable=False)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.supplier_id'), nullable=False, index=True)
-    status = db.Column(db.String(20), default='pending', index=True)  # pending, accepted, rejected, completed
+    status = db.Column(db.String(20), default='pending', index=True)
     total_amount = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
     items = db.relationship('PurchaseOrderItem', backref='purchase_order', lazy=True, cascade='all, delete-orphan')
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -32,10 +31,10 @@ class PurchaseOrderItem(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     po_id = db.Column(db.Integer, db.ForeignKey('purchase_orders.id'), nullable=False)
-    item = db.Column(db.Integer, nullable=False)  # 1-50
+    item = db.Column(db.Integer, nullable=False)
     quantity = db.Column(db.Float, nullable=False)
     unit_price = db.Column(db.Float, nullable=False)
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -44,4 +43,41 @@ class PurchaseOrderItem(db.Model):
             'quantity': self.quantity,
             'unit_price': self.unit_price,
             'total_price': self.quantity * self.unit_price
+        }
+
+class SelectedSupplier(db.Model):
+    __tablename__ = 'selected_suppliers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.supplier_id'), nullable=False)
+    item = db.Column(db.Integer, nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'supplier_id': self.supplier_id,
+            'item': self.item,
+            'created_at': self.created_at.isoformat()
+        }
+
+
+class ConfirmedPO(db.Model):
+    __tablename__ = 'confirmed_pos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    item = db.Column(db.Integer, nullable=False)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.supplier_id'), nullable=False)
+    quantity = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), default='confirmed')  # confirmed, completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'item': self.item,
+            'supplier_id': self.supplier_id,
+            'quantity': self.quantity,
+            'status': self.status,
+            'created_at': self.created_at.isoformat()
         }

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Suppliers</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center text-primary mb-4">👤 Manage Supplier Blacklist</h2>
+
+    <div id="alertContainer"></div>
+
+    <table class="table table-bordered table-hover bg-white shadow-sm">
+      <thead class="table-dark">
+        <tr>
+          <th>Supplier ID</th>
+          <th>Unit Price ($)</th>
+          <th>Lead Time</th>
+          <th>Blacklisted?</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="supplierTable">
+        <tr><td colspan="5" class="text-center">Loading suppliers...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+
+async function loadSuppliers() {
+  const table = document.getElementById("supplierTable");
+  table.innerHTML = "";
+
+  try {
+    const res = await fetch("http://localhost:5000/api/supplier/all", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      showAlert(false, data.message);
+      return;
+    }
+
+    if (data.suppliers.length === 0) {
+      table.innerHTML = `<tr><td colspan="5" class="text-center">No suppliers found</td></tr>`;
+      return;
+    }
+
+    data.suppliers.forEach(s => {
+      const row = document.createElement("tr");
+
+      row.innerHTML = `
+        <td>${s.supplier_id}</td>
+        <td>${s.unit_price}</td>
+        <td>${s.lead_time}</td>
+        <td>${s.is_blacklisted ? "✅ Yes" : "❌ No"}</td>
+        <td>
+          <button class="btn btn-sm ${s.is_blacklisted ? 'btn-success' : 'btn-danger'}"
+            onclick="toggleBlacklist(${s.supplier_id}, ${!s.is_blacklisted})">
+            ${s.is_blacklisted ? "Un-blacklist" : "Blacklist"}
+          </button>
+        </td>
+      `;
+
+      table.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error fetching suppliers:", err);
+    showAlert(false, "Failed to load suppliers.");
+  }
+}
+
+async function toggleBlacklist(supplierId, blacklist) {
+  const action = blacklist ? "blacklist" : "un-blacklist";
+
+  if (!confirm(`Are you sure you want to ${action} supplier ${supplierId}?`)) return;
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/procurement/blacklist-supplier/${supplierId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ blacklist })
+    });
+
+    const data = await res.json();
+    showAlert(data.success, data.message);
+
+    if (data.success) loadSuppliers();
+  } catch (err) {
+    console.error("Error:", err);
+    showAlert(false, "Failed to update supplier status.");
+  }
+}
+
+function showAlert(success, message) {
+  const alertDiv = document.getElementById("alertContainer");
+  const type = success ? "success" : "danger";
+  alertDiv.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  `;
+}
+
+// Load suppliers on page load
+loadSuppliers();
+</script>
+</body>
+</html>

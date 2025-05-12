@@ -8,10 +8,10 @@
 </head>
 <body class="bg-light">
   <div class="container py-5">
-    <h2 class="mb-4">📈 30-Day Warehouse Forecast</h2>
+    <h2 class="mb-4 text-primary">📈 30-Day Warehouse Forecast</h2>
 
-    <button class="btn btn-primary mb-3" onclick="generateForecast()">Generate Forecast</button>
-    <div id="forecastResult" class="mb-3 text-success"></div>
+    <button class="btn btn-success mb-3" onclick="generateForecast()">Generate Forecast</button>
+    <div id="forecastResult" class="mb-3 text-success fw-bold"></div>
 
     <canvas id="forecastChart" height="100"></canvas>
 
@@ -26,11 +26,6 @@
       </thead>
       <tbody></tbody>
     </table>
-
-    <div class="mt-4">
-      <input type="date" id="deleteDate" class="form-control w-25 d-inline">
-      <button class="btn btn-danger" onclick="deleteForecast()">Delete Forecast by Date</button>
-    </div>
   </div>
 
   <script>
@@ -38,21 +33,28 @@
     const token = localStorage.getItem("token");
 
     async function generateForecast() {
-      const res = await fetch(`${apiBase}/optimize`, {
+      const res = await fetch(`${apiBase}/forecast/generate`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}` }
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
       });
+
       const data = await res.json();
       document.getElementById("forecastResult").innerText = data.message;
-      loadForecast();
+
+      if (data.success) {
+        loadForecast();
+      }
     }
 
     async function loadForecast() {
       const res = await fetch(`${apiBase}/forecast`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (!data.success) {
         alert(data.message);
         return;
@@ -61,20 +63,24 @@
       const tableBody = document.querySelector("#forecastTable tbody");
       tableBody.innerHTML = "";
 
-      const items = data.forecast.map(item => item.Item);
-      const predictions = data.forecast.map(item => item.total_predicted_sales.toFixed(2));
+      const labels = [];
+      const values = [];
 
       data.forecast.forEach(item => {
+        labels.push(`Item ${item.item}`);
+        values.push(item.total_predicted_sales.toFixed(2));
+
         const row = `
           <tr>
-            <td>${item.Item}</td>
+            <td>${item.item}</td>
             <td>${item.total_predicted_sales.toFixed(2)}</td>
-            <td>${new Date().toISOString().split('T')[0]}</td>
-          </tr>`;
+            <td>${item.forecast_date}</td>
+          </tr>
+        `;
         tableBody.innerHTML += row;
       });
 
-      renderChart(items, predictions);
+      renderChart(labels, values);
     }
 
     function renderChart(labels, data) {
@@ -88,7 +94,7 @@
         data: {
           labels,
           datasets: [{
-            label: 'Forecasted Sales',
+            label: 'Forecasted Sales (30 Days)',
             data,
             backgroundColor: 'rgba(54, 162, 235, 0.6)',
             borderColor: 'rgba(54, 162, 235, 1)',
@@ -103,21 +109,7 @@
       });
     }
 
-    async function deleteForecast() {
-      const date = document.getElementById("deleteDate").value;
-      if (!date) return alert("Please select a date");
-
-      const res = await fetch(`${apiBase}/forecast?date=${date}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-
-      const data = await res.json();
-      alert(data.message);
-      if (data.success) loadForecast();
-    }
-
-    // Load forecast initially
+    // Initial Load
     loadForecast();
   </script>
 </body>

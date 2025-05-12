@@ -9,6 +9,9 @@ from models.warehouse import WarehouseRequest, Warehouse
 from models.supplier import Supplier
 from models.logs import Log
 from config import Config
+from models.procurement import SelectedSupplier
+from models.procurement import SelectedSupplier , ConfirmedPO
+
 
 class ProcurementService:
     @staticmethod
@@ -370,3 +373,145 @@ class ProcurementService:
             db.session.commit()
             
             return False, f"Error {action}ing supplier: {str(e)}"
+        
+
+
+    @staticmethod
+    def get_supplier_details(supplier_id):
+        try:
+            supplier = Supplier.query.filter_by(supplier_id=supplier_id).first()
+            if not supplier:
+                return None, "Supplier not found"
+            return supplier.to_dict(), None
+        except Exception as e:
+            return None, str(e)
+
+
+
+    @staticmethod
+    def select_supplier_for_item(supplier_id, item, user_id=None):
+        try:
+            # Remove existing selection if any (ensure uniqueness)
+            existing = SelectedSupplier.query.filter_by(item=item).first()
+            if existing:
+                db.session.delete(existing)
+                db.session.flush()
+
+            selected = SelectedSupplier(supplier_id=supplier_id, item=item)
+            db.session.add(selected)
+
+            # Log action
+            log = Log(
+                user_id=user_id,
+                module="procurement",
+                action="select_supplier",
+                description=f"Selected Supplier {supplier_id} for Item {item}",
+                status="success"
+            )
+            db.session.add(log)
+            db.session.commit()
+
+            return selected.to_dict(), None
+        except Exception as e:
+            db.session.rollback()
+            return None, f"Error selecting supplier: {str(e)}"
+
+
+
+
+    @staticmethod
+    def remove_selected_supplier(item, user_id=None):
+        try:
+            selected = SelectedSupplier.query.filter_by(item=item).first()
+            if not selected:
+                return False, "No selected supplier found for this item"
+
+            db.session.delete(selected)
+
+            log = Log(
+                user_id=user_id,
+                module="procurement",
+                action="remove_selected_supplier",
+                description=f"Removed selected supplier for Item {item}",
+                status="warning"
+            )
+            db.session.add(log)
+            db.session.commit()
+
+            return True, "Selected supplier removed successfully"
+        except Exception as e:
+            db.session.rollback()
+            return False, f"Error removing selected supplier: {str(e)}"
+
+
+
+    @staticmethod
+    def get_po_generation_data():
+        try:
+            # Fetch all pending warehouse requests
+            requests = WarehouseRequest.query.filter_by(status='pending').all()
+
+            if not requests:
+                return [], [], "No pending warehouse requests found."
+
+            # Load all selected suppliers
+            selected_suppliers = {s.item: s.supplier_id for s in SelectedSupplier.query.all()}
+
+            # Separate items with and without suppliers
+            with_suppliers = []
+            without_suppliers = []
+
+            for req in requests:
+                item_data = {
+                    'item': req.item,
+                    'requested_quantity': req.requested_quantity,
+                    'created_at': req.created_at,
+                }
+                if req.item in selected_suppliers:
+                    item_data['supplier_id'] = selected_suppliers[req.item]
+                    with_suppliers.append(item_data)
+                else:
+                    without_suppliers.append(item_data)
+
+            return with_suppliers, without_suppliers, None
+        except Exception as e:
+            return None, None, str(e)
+
+
+
+    @staticmethod
+    def confirm_purchase_order(item, supplier_id, user_id=None):
+        try:
+            # Get warehouse request
+            request = WarehouseRequest.query.filter_by(item=item, status='pending').first()
+            if not request:
+                return None, "No pending request found for item"
+
+            # Create Confirmed PO
+            confirmed = ConfirmedPO(
+                item=item,
+                supplier_id=supplier_id,
+                quantity=request.requested_quantity,
+                status="confirmed"
+            )
+            db.session.add(confirmed)
+
+            # Mark warehouse request as processing
+            request.status = "processing"
+            request.updated_at = datetime.utcnow()
+
+            # Log it
+            log = Log(
+                user_id=user_id,
+                module="procurement",
+                action="confirm_po",
+                description=f"Confirmed PO for Item {item} with Supplier {supplier_id}",
+                status="success"
+            )
+            db.session.add(log)
+
+            db.session.commit()
+            return confirmed.to_dict(), None
+        except Exception as e:
+            db.session.rollback()
+            return None, f"Error confirming PO: {str(e)}"

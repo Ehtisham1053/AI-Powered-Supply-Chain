@@ -52,3 +52,31 @@ class LogService:
         except Exception as e:
             db.session.rollback()
             return False, f"Error adding log: {str(e)}"
+        
+
+
+    @staticmethod
+    def get_logs(module=None, user_id=None, limit=100):
+        try:
+            query = Log.query
+
+            if module:
+                query = query.filter_by(module=module)
+
+            if user_id:
+                query = query.filter_by(user_id=user_id)
+
+            query = query.order_by(Log.timestamp.desc())
+
+            if limit:
+                query = query.limit(limit)
+
+            logs = query.all()
+
+            if not logs:
+                return None, "No logs found"
+
+            return [log.to_dict() for log in logs], None
+
+        except Exception as e:
+            return None, f"Error fetching logs: {str(e)}"

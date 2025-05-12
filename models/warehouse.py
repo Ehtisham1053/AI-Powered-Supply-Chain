@@ -1,14 +1,15 @@
 from datetime import datetime
 from . import db
 
+# ✅ 1. Warehouse Table
 class Warehouse(db.Model):
     __tablename__ = 'warehouse'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     item = db.Column(db.Integer, nullable=False, unique=True)  # 1-50
     stock = db.Column(db.Float, nullable=False)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -17,11 +18,13 @@ class Warehouse(db.Model):
             'last_updated': self.last_updated.isoformat()
         }
 
+
+# ✅ 2. Forecasted Sales Table
 class Forecasted30Days(db.Model):
     __tablename__ = 'forecasted_30_days'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    item = db.Column(db.Integer, nullable=False)  # 1-50
+    item = db.Column(db.Integer, nullable=False)
     total_predicted_sales = db.Column(db.Float, nullable=False)
     forecast_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -29,7 +32,7 @@ class Forecasted30Days(db.Model):
     __table_args__ = (
         db.UniqueConstraint('item', 'forecast_date', name='uix_item_forecast_date'),
     )
-    
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -39,16 +42,18 @@ class Forecasted30Days(db.Model):
             'created_at': self.created_at.isoformat()
         }
 
+
+# ✅ 3. Warehouse Request Table (For Procurement Officer)
 class WarehouseRequest(db.Model):
     __tablename__ = 'warehouse_requests'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     item = db.Column(db.Integer, nullable=False)  # 1-50
     requested_quantity = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    status = db.Column(db.String(20), default='pending')  # pending, fulfilled, canceled
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def to_dict(self):
         return {
             'id': self.id,

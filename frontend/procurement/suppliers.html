@@ -1,1 +1,127 @@
-// suppliers.html placeholder
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Supplier</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center text-primary mb-4">➕ Add New Supplier</h2>
+
+    <div id="alertContainer"></div>
+
+    <form id="supplierForm" class="bg-white p-4 rounded shadow-sm">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Supplier ID</label>
+          <input type="number" name="supplier_id" class="form-control" required />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-bold">Unit Price ($)</label>
+          <input type="number" step="0.01" name="unit_price" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-bold">On-Time Delivery Rate (%)</label>
+          <input type="number" step="0.01" name="on_time_delivery_rate" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Order Accuracy Rate (%)</label>
+          <input type="number" step="0.01" name="order_accuracy_rate" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Lead Time (days)</label>
+          <input type="number" step="0.01" name="lead_time" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Fulfillment Rate (%)</label>
+          <input type="number" step="0.01" name="fulfillment_rate" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Defect Rate (%)</label>
+          <input type="number" step="0.01" name="defect_rate" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Return Rate (%)</label>
+          <input type="number" step="0.01" name="return_rate" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Responsiveness Score (1–10)</label>
+          <input type="number" step="0.01" name="responsiveness_score" min="1" max="10" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Flexibility Rating (1–10)</label>
+          <input type="number" step="0.01" name="flexibility_rating" min="1" max="10" class="form-control" required />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-bold">Years in Business</label>
+          <input type="number" step="0.01" name="years_in_business" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-bold">Customer Satisfaction Rating (1–10)</label>
+        <input type="number" step="0.01" name="customer_satisfaction_rating" min="1" max="10" class="form-control" required />
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">✅ Add Supplier</button>
+    </form>
+  </div>
+
+<script>
+const token = localStorage.getItem("token");
+
+document.getElementById("supplierForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {};
+
+  for (const input of form.elements) {
+    if (input.name) {
+      data[input.name] = input.type === "number" ? parseFloat(input.value) : input.value;
+    }
+  }
+
+  try {
+    const res = await fetch("http://localhost:5000/api/supplier/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    showAlert(result.success, result.message);
+
+    if (result.success) form.reset();
+  } catch (err) {
+    console.error("Error:", err);
+    showAlert(false, "Failed to connect to server.");
+  }
+});
+
+function showAlert(success, message) {
+  const alertDiv = document.getElementById("alertContainer");
+  const type = success ? "success" : "danger";
+  alertDiv.innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
