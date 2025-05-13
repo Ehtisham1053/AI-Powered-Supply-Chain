@@ -2,414 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Inventory Dashboard | SCM</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventory Dashboard | Supply Chain Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <link rel="stylesheet" href="../assets/css/style.css">
   <style>
-    .card-custom { margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+    .dashboard-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .card-icon {
+      font-size: 2.5rem;
+    }
   </style>
 </head>
 <body class="bg-light">
-<!-- Sticky Header Navigation -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top mb-3">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold text-warning" href="#">📦 Inventory Panel</a>
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-outline-light btn-sm" onclick="scrollToSection('graphSection')">📊 View Graph</button>
-        <button class="btn btn-outline-light btn-sm" onclick="scrollToSection('addUpdateSection')">➕ Add/Update</button>
-        <button class="btn btn-outline-light btn-sm" onclick="scrollToSection('lowStockSection')">⚠️ Low Stock</button>
-        <button class="btn btn-outline-light btn-sm" onclick="scrollToSection('optimizeSection')">🧠 Optimize</button>
-        <button class="btn btn-outline-light btn-sm" onclick="scrollToSection('requestSection')">📬 Requests</button>
-      </div>
-    </div>
-  </nav>
-  
-<div class="container py-4">
-  <h2 class="text-center text-primary mb-4">📦 Inventory Management Dashboard</h2>
 
-  <!-- Filter Controls -->
-  <div class="card card-custom p-3">
-    <h5>🔍 Filter Inventory</h5>
-    <div class="row">
-      <div class="col-md-5">
-        <select id="storeFilter" class="form-select">
-          <option value="">-- Filter by Store --</option>
-        </select>
-      </div>
-      <div class="col-md-5">
-        <select id="itemFilter" class="form-select">
-          <option value="">-- Filter by Item --</option>
-        </select>
-      </div>
-      <div class="col-md-2 d-grid">
-        <button class="btn btn-primary" onclick="applyFilter()">Apply</button>
-      </div>
+  <div class="container py-4">
+    <div class="text-center mb-4">
+      <h2 class="text-primary fw-bold">Inventory Dashboard</h2>
+      <p id="welcomeMsg" class="text-muted"></p>
     </div>
-  </div>
 
-  <!-- Inventory Table -->
-  <div class="card card-custom p-3">
-    <h5>📋 Current Inventory</h5>
-    
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover">
-        <thead class="table-dark">
-          <tr>
-            <th>Store</th>
-            <th>Item</th>
-            <th>Stock</th>
-            <th>Last Updated</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody">
-          <tr><td colspan="4" class="text-center">No data loaded</td></tr>
-        </tbody>
-      </table>
+    <div class="row g-4">
+
+      <!-- Show Inventory Card -->
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-success mb-2">📦</div>
+            <h5 class="card-title">Show Inventory</h5>
+            <p class="card-text">View current inventory stock levels across stores.</p>
+            <a href="inventory_data.html" class="btn btn-outline-success btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Inventory Card -->
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-warning mb-2">➕</div>
+            <h5 class="card-title">Add Inventory</h5>
+            <p class="card-text">Add or update inventory stock for a store.</p>
+            <a href="add_inventory.html" class="btn btn-outline-warning btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optimize Inventory Card -->
+      <div class="col-md-4">
+        <div class="card dashboard-card shadow-sm text-center p-3 bg-white">
+          <div class="card-body">
+            <div class="card-icon text-info mb-2">🔧</div>
+            <h5 class="card-title">Optimize Inventory</h5>
+            <p class="card-text">Optimize inventory levels based on forecasts and stock needs.</p>
+            <a href="optimize_inventory.html" class="btn btn-outline-info btn-sm">Go</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- Add/Update Inventory -->
-  <div class="card card-custom p-3" id="addUpdateSection">
-    <h5>➕ Add / 🔁 Update Inventory</h5>
-    <!-- Graph Section -->
-
-  
-    <div class="row g-3">
-      <div class="col-md-3">
-        <select id="addStore" class="form-select"></select>
-      </div>
-      <div class="col-md-3">
-        <select id="addItem" class="form-select"></select>
-      </div>
-      <div class="col-md-3">
-        <input type="number" id="addStock" class="form-control" placeholder="Quantity">
-      </div>
-      <div class="col-md-3 d-grid gap-2">
-        <button class="btn btn-success" onclick="addInventory()">Add</button>
-        <button class="btn btn-warning" onclick="updateInventory()">Update</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Optimize Button -->
-  <div class="card card-custom p-3" id="optimizeSection">
-    <h5>🧠 Optimize Inventory</h5>
-    <button class="btn btn-outline-info" onclick="optimizeInventory()">Run Optimization</button>
-    <div id="optimizeResult" class="mt-2 text-success fw-semibold"></div>
-  </div>
-
-  <!-- Requests Table -->
-  <div class="card card-custom p-3" id="requestSection">
-    <h5>📬 Pending Restock Requests</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped">
-        <thead class="table-secondary">
-          <tr>
-            <th>Store</th>
-            <th>Item</th>
-            <th>Requested Qty</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="requestsTableBody">
-          <tr><td colspan="4" class="text-center">No requests yet</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Low Stock Table -->
-  <div class="card card-custom p-3" id="lowStockSection">
-    <h5>⚠️ Low Stock Items</h5>
-    <div class="table-responsive">
-      <table class="table table-bordered">
-        <thead class="table-danger">
-            <tr>
-              <th class="table-danger">Store</th>
-              <th>Item</th>
-              <th>Shortage Quantity</th>
-            </tr>
-          </thead>
-        <tbody id="lowStockTableBody">
-          <tr><td colspan="3" class="text-center">No low stock items</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<script>
-const token = localStorage.getItem("token");
-const apiBase = "http://localhost:5000/api/inventory";
-
-const storeMap = {
-    1: "PAKMART G-9 MARKAZ",
-    2: "PAKMART F-10 CENTER",
-    3: "PAKMART I-8 COMMERCIAL",
-    4: "PAKMART DHA PHASE 2",
-    5: "PAKMART BLUE AREA",
-    6: "PAKMART BAHARAKU",
-    7: "PAKMART GULBERG GREENS",
-    8: "PAKMART F-6 SUPER MARKET",
-    9: "PAKMART BANI GALA",
-    10: "PAKMART H-13 SERVICE ROAD"
-};
-
-const itemMap = {
-    1: "Fresh Fruits",
-    2: "Fresh Vegetables",
-    3: "Dairy Products",
-    4: "Bakery Items",
-    5: "Beverages",
-    6: "Canned Goods",
-    7: "Frozen Foods",
-    8: "Snacks",
-    9: "Breakfast Cereals",
-    10: "Condiments & Sauces",
-    11: "Meat & Poultry",
-    12: "Seafood",
-    13: "Personal Care",
-    14: "Hair Care",
-    15: "Skin Care",
-    16: "Oral Care",
-    17: "Baby Products",
-    18: "Pet Supplies",
-    19: "Household Cleaners",
-    20: "Laundry Detergents",
-    21: "Paper Products",
-    22: "Stationery",
-    23: "Kitchenware",
-    24: "Cookware",
-    25: "Tableware",
-    26: "Home Decor",
-    27: "Lighting & Lamps",
-    28: "Small Appliances",
-    29: "Electronics",
-    30: "Mobile Accessories",
-    31: "Toys & Games",
-    32: "Books & Magazines",
-    33: "Office Supplies",
-    34: "Health Supplements",
-    35: "Over-the-Counter Medicine",
-    36: "First Aid Supplies",
-    37: "Gardening Tools",
-    38: "Automotive Supplies",
-    39: "Luggage & Travel Accessories",
-    40: "Footwear",
-    41: "Apparel (Men)",
-    42: "Apparel (Women)",
-    43: "Apparel (Kids)",
-    44: "Jewelry & Accessories",
-    45: "Seasonal Decorations",
-    46: "Party Supplies",
-    47: "Gift Items",
-    48: "Cleaning Tools (Mops, Brooms)",
-    49: "Fitness Equipment",
-    50: "Craft Supplies"
-};
-
-function loadDropdowns() {
-  const stores = Object.entries(storeMap).map(([id, name]) => `<option value="${id}">${name}</option>`);
-  const items = Object.entries(itemMap).map(([id, name]) => `<option value="${id}">${name}</option>`);
-  document.querySelectorAll("#storeFilter, #addStore").forEach(e => e.innerHTML += stores.join(''));
-  document.querySelectorAll("#itemFilter, #addItem").forEach(e => e.innerHTML += items.join(''));
-}
-
-function loadInventory(endpoint = "/data") {
-  fetch(`${apiBase}${endpoint}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }).then(r => r.json()).then(data => {
-    const tbody = document.getElementById("inventoryTableBody");
-    tbody.innerHTML = "";
-    data.inventory?.forEach(row => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${storeMap[row.Store]}</td>
-          <td>${itemMap[row.Item]}</td>
-          <td>${row.Stock_available}</td>
-          <td>${row.Last_updated}</td>
-        </tr>
-      `;
-    });
-    plotInventoryGraph(data.inventory); // ✅ plot chart
-  });
-}
-
-
-function applyFilter() {
-  const store = document.getElementById("storeFilter").value;
-  const item = document.getElementById("itemFilter").value;
-  if (store) return loadInventory(`/store/${store}`);
-  if (item) return loadInventory(`/item/${item}`);
-  loadInventory();
-}
-
-function addInventory() {
-  const store = document.getElementById("addStore").value;
-  const item = document.getElementById("addItem").value;
-  const stock = document.getElementById("addStock").value;
-
-  if (!store || !item || !stock || stock <= 0) {
-    return alert("Please select store/item and enter valid stock quantity.");
-  }
-
-  const payload = { store: parseInt(store), item: parseInt(item), stock: parseInt(stock) };
-  console.log("🔼 Sending to /add:", payload);
-
-  fetch(`${apiBase}/add`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message);
-      if (data.success) {
-        loadInventory();
-        loadRequests();
-        loadLowStock();
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error adding inventory:", err);
-      alert("Failed to add inventory.");
-    });
-}
-
-function updateInventory() {
-  const store = document.getElementById("addStore").value;
-  const item = document.getElementById("addItem").value;
-  const stock = document.getElementById("addStock").value;
-
-  if (!store || !item || !stock || stock <= 0) {
-    return alert("Please select store/item and enter valid stock quantity.");
-  }
-
-  const payload = { stock: parseInt(stock) };
-  console.log("📝 Updating to /update:", store, item, payload);
-
-  fetch(`${apiBase}/update/${store}/${item}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-    .then(res => res.json())
-    .then(data => {
-      alert(data.message);
-      if (data.success) {
-        loadInventory();
-        loadRequests();
-        loadLowStock();
-      }
-    })
-    .catch(err => {
-      console.error("❌ Error updating inventory:", err);
-      alert("Failed to update inventory.");
-    });
-}
-
-
-function optimizeInventory() {
-    
-forecast_df['Store'] = forecast_df['Store'].astype(int)
-forecast_df['Item'] = forecast_df['Item'].astype(int)
-forecast_df['total_7_days_prediction'] = forecast_df['total_7_days_prediction'].round(2)
-
-inventory_df['Store'] = inventory_df['Store'].astype(int)
-inventory_df['Item'] = inventory_df['Item'].astype(int)
-inventory_df['Stock_available'] = inventory_df['Stock_available'].astype(float)
-
-  fetch(`${apiBase}/optimize`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` }
-  }).then(r => r.json()).then(data => {
-    document.getElementById("optimizeResult").innerText = data.message;
-    loadRequests();
-    loadLowStock();
-  });
-}
-
-function loadRequests() {
-  fetch(`${apiBase}/requests`, {
-    headers: { Authorization: `Bearer ${token}` }
-  }).then(r => r.json()).then(data => {
-    const tbody = document.getElementById("requestsTableBody");
-    tbody.innerHTML = "";
-    data.requests?.forEach(row => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${storeMap[row.store]}</td>
-          <td>${itemMap[row.item]}</td>
-          <td>${row.requested_quantity}</td>
-          <td>${row.status}</td>
-        </tr>
-      `;
-    });
-  });
-}
-
-function loadLowStock() {
-    fetch(`${apiBase}/requests`, {
-  headers: { Authorization: `Bearer ${token}` }
-})
-  .then(r => r.json())
-  .then(data => {
-    const tbody = document.getElementById("lowStockTableBody");
-    tbody.innerHTML = "";
-    if (!data.requests || data.requests.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="3" class="text-center">No low stock items</td></tr>`;
-      return;
+  <script src="../common/utils.js"></script>
+  <script>
+    const tokenData = parseJwt(localStorage.getItem('token'));
+    if (!tokenData || tokenData.role !== 'supply_chain_manager') {
+      alert('Unauthorized or session expired!');
+      window.location.href = '../login.html';
+    } else {
+      document.getElementById('welcomeMsg').innerText = `Welcome, ${tokenData.username.toUpperCase()} (${tokenData.role.replace(/_/g, ' ')})`;
     }
-    data.requests.forEach(row => {
-      tbody.innerHTML += `
-        <tr>
-          <td>${storeMap[row.store]}</td>
-          <td>${itemMap[row.item]}</td>
-          <td>${row.requested_quantity}</td>
-        </tr>
-      `;
-    });
-  });
-}
-
-loadDropdowns();
-loadInventory();
-loadRequests();
-loadLowStock();
-function scrollToSection(sectionId) {
-  const target = document.getElementById(sectionId);
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
-function plotInventoryGraph(data) {
-  const stockPerItem = {};
-  data.forEach(row => {
-    const itemName = itemMap[row.Item] || `Item ${row.Item}`;
-    stockPerItem[itemName] = (stockPerItem[itemName] || 0) + row.Stock_available;
-  });
-
-  const labels = Object.keys(stockPerItem);
-  const values = Object.values(stockPerItem);
-
-  Plotly.newPlot("inventoryChart", [{
-    x: labels,
-    y: values,
-    type: 'bar',
-    marker: { color: 'mediumseagreen' }
-  }], {
-    title: "Total Stock Available per Item"
-  });
-}
-
-</script>
+  </script>
 </body>
 </html>

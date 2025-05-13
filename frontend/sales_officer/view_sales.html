@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .card {
+      border: none;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .dashboard-header {
+      font-weight: bold;
+      color: #0d6efd;
+    }
+    table th, table td {
+      vertical-align: middle !important;
+    }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <h2 class="text-center mb-4 dashboard-header">📊 Sales Dashboard</h2>
+
+  <!-- Summary Cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 text-center bg-white">
+        <h6>Total Sales</h6>
+        <h4 id="totalSales">0</h4>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center bg-white">
+        <h6>Total Entries</h6>
+        <h4 id="totalEntries">0</h4>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center bg-white">
+        <h6>Unique Items</h6>
+        <h4 id="uniqueItems">0</h4>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center bg-white">
+        <h6>Unique Stores</h6>
+        <h4 id="uniqueStores">0</h4>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row mb-5">
+    <div class="col-md-6">
+      <div class="bg-white p-3 rounded shadow-sm">
+        <h6 class="text-center">📍 Sales by Store</h6>
+        <div id="barChart"></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="bg-white p-3 rounded shadow-sm">
+        <h6 class="text-center">📈 Sales Over Time</h6>
+        <div id="lineChart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sales Table -->
+  <div class="bg-white p-4 rounded shadow-sm">
+    <h5 class="mb-3">📋 Recent Sales Records</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>Date</th>
+            <th>Store</th>
+            <th>Item</th>
+            <th>Sale</th>
+          </tr>
+        </thead>
+        <tbody id="salesTable">
+          <tr><td colspan="4" class="text-center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+
+const storeMap = {
+  1: "PAKMART G-9 MARKAZ", 2: "PAKMART F-10 CENTER", 3: "PAKMART I-8 COMMERCIAL", 4: "PAKMART DHA PHASE 2", 5: "PAKMART BLUE AREA",
+  6: "PAKMART BAHARAKU", 7: "PAKMART GULBERG GREENS", 8: "PAKMART F-6 SUPER MARKET", 9: "PAKMART BANI GALA", 10: "PAKMART H-13 SERVICE ROAD"
+};
+
+const itemMap = {
+  1: "Fresh Fruits", 2: "Fresh Vegetables", 3: "Dairy Products", 4: "Bakery Items", 5: "Beverages",
+  6: "Canned Goods", 7: "Frozen Foods", 8: "Snacks", 9: "Breakfast Cereals", 10: "Condiments & Sauces",
+  11: "Meat & Poultry", 12: "Seafood", 13: "Personal Care", 14: "Hair Care", 15: "Skin Care",
+  16: "Oral Care", 17: "Baby Products", 18: "Pet Supplies", 19: "Household Cleaners", 20: "Laundry Detergents",
+  21: "Paper Products", 22: "Stationery", 23: "Kitchenware", 24: "Cookware", 25: "Tableware",
+  26: "Home Decor", 27: "Lighting & Lamps", 28: "Small Appliances", 29: "Electronics", 30: "Mobile Accessories",
+  31: "Toys & Games", 32: "Books & Magazines", 33: "Office Supplies", 34: "Health Supplements", 35: "Over-the-Counter Medicine",
+  36: "First Aid Supplies", 37: "Gardening Tools", 38: "Automotive Supplies", 39: "Luggage & Travel Accessories", 40: "Footwear",
+  41: "Apparel (Men)", 42: "Apparel (Women)", 43: "Apparel (Kids)", 44: "Jewelry & Accessories", 45: "Seasonal Decorations",
+  46: "Party Supplies", 47: "Gift Items", 48: "Cleaning Tools (Mops, Brooms)", 49: "Fitness Equipment", 50: "Craft Supplies"
+};
+
+async function loadSales() {
+  const res = await fetch("http://localhost:5000/api/sales/data", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const result = await res.json();
+  if (!result.success) return alert("Failed to load sales data");
+
+  const data = result.sales;
+  const table = document.getElementById("salesTable");
+  table.innerHTML = "";
+
+  // Summary
+  document.getElementById("totalSales").textContent = data.reduce((sum, row) => sum + row.Sale, 0).toFixed(2);
+  document.getElementById("totalEntries").textContent = data.length;
+  document.getElementById("uniqueItems").textContent = new Set(data.map(row => row.Item)).size;
+  document.getElementById("uniqueStores").textContent = new Set(data.map(row => row.Store)).size;
+
+  // Table rows
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${new Date(row.Date).toLocaleDateString()}</td>
+      <td>${storeMap[row.Store] || row.Store}</td>
+      <td>${itemMap[row.Item] || row.Item}</td>
+      <td>${row.Sale}</td>
+    `;
+    table.appendChild(tr);
+  });
+
+  // Chart: Sales by Store
+  const storeSales = {};
+  data.forEach(row => {
+    storeSales[row.Store] = (storeSales[row.Store] || 0) + row.Sale;
+  });
+
+  const barX = Object.keys(storeSales).map(id => storeMap[id] || `Store ${id}`);
+  const barY = Object.values(storeSales);
+
+  Plotly.newPlot("barChart", [{
+    x: barX,
+    y: barY,
+    type: "bar",
+    marker: { color: 'lightskyblue' }
+  }], { margin: { t: 20 }, yaxis: { title: "Total Sales" } });
+
+  // Chart: Sales Over Time
+  const dateSales = {};
+  data.forEach(row => {
+    const d = row.Date;
+    dateSales[d] = (dateSales[d] || 0) + row.Sale;
+  });
+
+  const lineX = Object.keys(dateSales).sort();
+  const lineY = lineX.map(d => dateSales[d]);
+
+  Plotly.newPlot("lineChart", [{
+    x: lineX,
+    y: lineY,
+    mode: "lines+markers",
+    line: { color: 'royalblue' }
+  }], { margin: { t: 20 }, xaxis: { title: "Date" }, yaxis: { title: "Sales" } });
+}
+
+loadSales();
+</script>
+</body>
+</html>

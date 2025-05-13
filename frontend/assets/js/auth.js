@@ -44,10 +44,10 @@ document.addEventListener('DOMContentLoaded', function () {
               window.location.href = '/frontend/procurement/dashboard.html';
               break;
             case 'supplier':
-              window.location.href = '/supplier/dashboard.html';
+              window.location.href = '/frontend/supplier/dashboard.html';
               break;
             case 'sales_officer':
-              window.location.href = '/sales_officer/dashboard.html';
+              window.location.href = '/frontend/sales_officer/dashboard.html';
               break;
             default:
               alert('Unknown role!');

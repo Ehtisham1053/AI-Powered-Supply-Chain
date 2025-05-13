@@ -80,3 +80,9 @@ class LogService:
 
         except Exception as e:
             return None, f"Error fetching logs: {str(e)}"
+        
+
+    @staticmethod
+    def get_sales_logs(user_id=None, limit=100):
+        return LogService.get_logs(module="sales", user_id=user_id, limit=limit)
+

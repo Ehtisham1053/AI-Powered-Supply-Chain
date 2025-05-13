@@ -194,3 +194,20 @@ def download_procurement_logs():
             'Content-Disposition': 'attachment; filename=procurement_logs.csv'
         }
     )
+
+
+
+@log_bp.route('/sales-officer', methods=['GET'])
+@jwt_required()
+@role_required('sales_officer')
+def get_sales_officer_logs():
+    user_id = get_jwt_identity()
+    logs, error = LogService.get_sales_logs(user_id=user_id)
+    if error:
+        return jsonify({'success': False, 'message': error}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Sales logs retrieved successfully',
+        'logs': logs
+    }), 200

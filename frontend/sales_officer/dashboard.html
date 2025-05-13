@@ -1,70 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sales Officer Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css">
+
   <style>
     body {
-      background-color: #f8f9fa;
+      background-color: #f0f4f8;
     }
-    .dashboard-card {
-      border-radius: 15px;
-      transition: transform 0.2s;
+    .card {
+      border: none;
+      transition: transform 0.3s ease-in-out;
+      opacity: 0;
+      transform: translateY(20px);
     }
-    .dashboard-card:hover {
+    .card:hover {
       transform: translateY(-5px);
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
-    .dashboard-icon {
-      font-size: 2rem;
+    .card.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: all 0.6s ease;
+    }
+    .card-icon {
+      font-size: 40px;
+      color: #0d6efd;
     }
   </style>
 </head>
 <body>
-<div class="container py-5">
-  <h2 class="text-center text-primary mb-4">📊 Sales Officer Dashboard</h2>
-  <div class="row g-4">
+  <div class="container py-5">
+    <h2 class="text-center text-primary mb-5">📈 Sales Officer Dashboard</h2>
 
-    <div class="col-md-4">
-      <a href="view_sales.html" class="text-decoration-none">
-        <div class="card dashboard-card shadow-sm p-3 text-center bg-white">
-          <div class="dashboard-icon">📈</div>
-          <h5 class="mt-2">View Sales Data</h5>
+    <div class="row g-4 justify-content-center">
+      <!-- Add Sales -->
+      <div class="col-md-4">
+        <div class="card text-center p-4 bg-white shadow-sm">
+          <div class="card-body">
+            <div class="card-icon mb-3">➕</div>
+            <h5 class="card-title">Add Sales</h5>
+            <p class="card-text">Enter sales data for individual items and update inventory.</p>
+            <a href="add_sales.html" class="btn btn-primary">Go to Add Sales</a>
+          </div>
         </div>
-      </a>
-    </div>
+      </div>
 
-    <div class="col-md-4">
-      <a href="add_sale.html" class="text-decoration-none">
-        <div class="card dashboard-card shadow-sm p-3 text-center bg-white">
-          <div class="dashboard-icon">➕</div>
-          <h5 class="mt-2">Add Manual Sale</h5>
+      <!-- Sales Dashboard -->
+      <div class="col-md-4">
+        <div class="card text-center p-4 bg-white shadow-sm">
+          <div class="card-body">
+            <div class="card-icon mb-3">📊</div>
+            <h5 class="card-title">Sales Dashboard</h5>
+            <p class="card-text">View and analyze recent sales performance across stores.</p>
+            <a href="view_sales.html" class="btn btn-primary">Go to Sales Dashboard</a>
+          </div>
         </div>
-      </a>
-    </div>
+      </div>
 
-    <div class="col-md-4">
-      <a href="upload_csv.html" class="text-decoration-none">
-        <div class="card dashboard-card shadow-sm p-3 text-center bg-white">
-          <div class="dashboard-icon">📁</div>
-          <h5 class="mt-2">Upload Sales via CSV</h5>
+      <!-- 7-Day Forecast -->
+      <div class="col-md-4">
+        <div class="card text-center p-4 bg-white shadow-sm">
+          <div class="card-body">
+            <div class="card-icon mb-3">📋</div>
+            <h5 class="card-title">Logs</h5>
+            <p class="card-text">Review activity logs and status reports.</p>
+            <a href="logs.html" class="btn btn-primary">View Sales Logs</a>
+          </div>
         </div>
-      </a>
+      </div>
     </div>
-
-    <div class="col-md-4">
-      <a href="logs.html" class="text-decoration-none">
-        <div class="card dashboard-card shadow-sm p-3 text-center bg-white">
-          <div class="dashboard-icon">📚</div>
-          <h5 class="mt-2">View Logs</h5>
-        </div>
-      </a>
-    </div>
-
   </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Animate cards on load
+    document.addEventListener("DOMContentLoaded", () => {
+      const cards = document.querySelectorAll(".card");
+      cards.forEach((card, index) => {
+        setTimeout(() => {
+          card.classList.add("visible");
+        }, index * 150);
+      });
+    });
+  </script>
 </body>
 </html>

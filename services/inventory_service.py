@@ -6,6 +6,7 @@ from models.inventory import Inventory, InventoryRequest
 from models.sales import Forecasted7Days
 from models.logs import Log
 
+
 class InventoryService:
 
     @staticmethod

@@ -11,10 +11,11 @@ from .procurement_controller import procurement_bp
 
 from .supplier_controller import supplier_bp
 from .sales_controller import sales_bp
+from .supplier_dashboard_controller import supplier_dashboard_bp
 
 from .log_controller import log_bp
 
-
+from .inventory_controller import inventory_bp
 def init_routes(app):
     # Register blueprints with the app
     app.register_blueprint(auth_bp)
@@ -27,3 +28,6 @@ def init_routes(app):
     app.register_blueprint(log_bp)
     app.register_blueprint(message_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(supplier_dashboard_bp)
+
+
